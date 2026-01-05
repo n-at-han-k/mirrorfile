@@ -167,7 +167,7 @@ module Mirrorfile
         Usage: mirror <command>
 
         Commands:
-          init      Create Mirrorfile, .gitignore entry, and Zeitwerk initializer
+          init      Create Mirrorfile, .gitignore entry, and Zeitwerk initializer (Rails only)
           install   Clone repositories that don't exist locally
           update    Pull latest changes for existing repositories
           list      Show all defined mirrors
