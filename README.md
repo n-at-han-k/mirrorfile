@@ -22,7 +22,7 @@ gem install mirrorfile
 
 ## Usage
 ```bash
-mirror init      # creates Mirrorfile, .gitignore entry, zeitwerk initializer
+mirror init      # creates Mirrorfile, .gitignore entry, zeitwerk initializer (Rails only)
 mirror install   # clones missing repos
 mirror update    # pulls existing repos
 mirror list      # shows defined mirrors

@@ -98,7 +98,7 @@ module Mirrorfile
     #
     # - Creates a Mirrorfile with example syntax
     # - Adds /mirrors to .gitignore (creates file if needed)
-    # - Creates a Rails initializer for Zeitwerk autoloading
+    # - Creates a Rails initializer for Zeitwerk autoloading (Rails projects only)
     #
     # Existing files are not overwritten.
     #
@@ -211,6 +211,8 @@ module Mirrorfile
     # @return [Integer, nil] bytes written or nil if file exists
     # @api private
     def setup_zeitwerk
+      return unless rails_project?
+
       initializer_path.dirname.mkpath
       initializer_path.exist? || initializer_path.write(<<~RUBY)
         # frozen_string_literal: true
@@ -230,6 +232,15 @@ module Mirrorfile
           end if mirrors.exist?
         end
       RUBY
+    end
+
+    # Determines if the current project is a Rails application by checking
+    # for the standard Rails application entrypoint.
+    #
+    # @return [Boolean] true if Rails project structure is detected
+    # @api private
+    def rails_project?
+      root.join("config/application.rb").exist?
     end
   end
 end
