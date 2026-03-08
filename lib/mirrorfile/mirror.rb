@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'fileutils'
+
 module Mirrorfile
   # Orchestrates mirror operations: init, install, and update.
   #
@@ -46,10 +48,10 @@ module Mirrorfile
     #   mirror = Mirrorfile::Mirror.new(root: "/path/to/project")
     def initialize(root: Dir.pwd)
       @root = Pathname.new(root)
-      @mirrors_dir = @root.join("mirrors")
-      @gitignore_path = @root.join(".gitignore")
-      @mirrorfile_path = @root.join("Mirrorfile")
-      @initializer_path = @root.join("config/initializers/mirrors.rb")
+      @mirrors_dir = @root.join('mirrors')
+      @gitignore_path = @root.join('.gitignore')
+      @mirrorfile_path = @root.join('Mirrorfile')
+      @initializer_path = @root.join('config/initializers/mirrors.rb')
       @mirrorfile = load_mirrorfile if @mirrorfile_path.exist?
     end
 
@@ -131,6 +133,23 @@ module Mirrorfile
       @mirrorfile.entries.to_a
     end
 
+    # Migrates the project to mirrorfile v1.0.
+    #
+    # Performs the following steps:
+    # - Updates Gemfile version constraint to ~> 1.0 (if Gemfile exists)
+    # - Updates the system gem if installed
+    # - Installs template files (.envrc, README.md) into mirrors/
+    # - Renames .git directories to .git.mirror in existing mirrors
+    #
+    # @return [void]
+    def migrate_to_v1
+      update_gemfile
+      update_system_gem
+      install_templates
+      rename_git_dirs
+      puts 'Migration to v1.0 complete.'
+    end
+
     private
 
     # Loads and parses the Mirrorfile.
@@ -195,10 +214,10 @@ module Mirrorfile
     # @return [Integer, nil] bytes written or nil if already ignored
     # @api private
     def setup_gitignore
-      gitignore_path.exist? || gitignore_path.write("")
+      gitignore_path.exist? || gitignore_path.write('')
 
       lines = gitignore_path.readlines.map(&:chomp)
-      lines.include?("/mirrors") || gitignore_path.write([*lines, "/mirrors"].join("\n") + "\n")
+      lines.include?('/mirrors') || gitignore_path.write([*lines, '/mirrors'].join("\n") + "\n")
     end
 
     # Creates a Rails initializer for Zeitwerk autoloading.
@@ -234,13 +253,96 @@ module Mirrorfile
       RUBY
     end
 
+    # Updates the Gemfile to use mirrorfile ~> 1.0.
+    #
+    # Replaces any existing mirrorfile gem declaration with one
+    # constrained to ~> 1.0. Does nothing if Gemfile doesn't exist
+    # or doesn't reference mirrorfile.
+    #
+    # @return [void]
+    # @api private
+    def update_gemfile
+      gemfile = root.join('Gemfile')
+      return unless gemfile.exist?
+
+      content = gemfile.read
+      updated = content.gsub(/^(\s*gem\s+["']mirrorfile["']).*$/, '\1, "~> 1.0"')
+
+      return unless content != updated
+
+      gemfile.write(updated)
+      puts 'Updated Gemfile to mirrorfile ~> 1.0'
+    end
+
+    # Updates the system-installed mirrorfile gem.
+    #
+    # Checks if the gem is installed globally and runs gem update
+    # if so.
+    #
+    # @return [void]
+    # @api private
+    def update_system_gem
+      return if ENV['MIRRORFILE_SKIP_GEM_UPDATE']
+      return unless system('gem', 'list', '-i', 'mirrorfile', out: File::NULL, err: File::NULL)
+
+      puts 'Updating system gem...'
+      system('gem', 'update', 'mirrorfile')
+    end
+
+    # Copies template files into the mirrors directory.
+    #
+    # Creates the mirrors directory if needed, then copies
+    # envrc.template and README.md.template. Existing files
+    # are not overwritten.
+    #
+    # @return [void]
+    # @api private
+    def install_templates
+      mirrors_dir.mkpath
+
+      templates_dir = Pathname.new(__dir__).join('../../templates')
+
+      envrc_dest = mirrors_dir.join('.envrc')
+      unless envrc_dest.exist?
+        FileUtils.cp(templates_dir.join('envrc.template'), envrc_dest)
+        puts 'Created mirrors/.envrc'
+      end
+
+      readme_dest = mirrors_dir.join('README.md')
+      return if readme_dest.exist?
+
+      FileUtils.cp(templates_dir.join('README.md.template'), readme_dest)
+      puts 'Created mirrors/README.md'
+    end
+
+    # Renames .git directories to .git.mirror in existing mirrors.
+    #
+    # Scans all subdirectories of mirrors/ for .git directories
+    # and renames them. Skips entries that already have .git.mirror.
+    #
+    # @return [void]
+    # @api private
+    def rename_git_dirs
+      return unless mirrors_dir.exist?
+
+      mirrors_dir.children.select(&:directory?).each do |mirror_path|
+        git_dir = mirror_path.join('.git')
+        git_mirror_dir = mirror_path.join('.git.mirror')
+
+        if git_dir.exist? && !git_mirror_dir.exist?
+          File.rename(git_dir.to_s, git_mirror_dir.to_s)
+          puts "Renamed #{mirror_path.basename}/.git to .git.mirror"
+        end
+      end
+    end
+
     # Determines if the current project is a Rails application by checking
     # for the standard Rails application entrypoint.
     #
     # @return [Boolean] true if Rails project structure is detected
     # @api private
     def rails_project?
-      root.join("config/application.rb").exist?
+      root.join('config/application.rb').exist?
     end
   end
 end

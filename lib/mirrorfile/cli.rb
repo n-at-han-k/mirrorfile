@@ -21,7 +21,12 @@ module Mirrorfile
   class CLI
     # Available CLI commands
     # @return [Array<String>] list of valid commands
-    COMMANDS = %w[init install update list help].freeze
+    COMMANDS = %w[init install update list migrate-to-v1 help].freeze
+
+    # Deprecation warning shown on every command except migrate-to-v1
+    DEPRECATION_WARNING = <<~WARN.freeze
+      [mirrorfile] WARNING: v#{VERSION} is deprecated. Run `mirror migrate-to-v1` to upgrade to v1.0.
+    WARN
 
     # Creates a new CLI instance.
     #
@@ -48,15 +53,18 @@ module Mirrorfile
     def call(args)
       command = args.first
 
+      @stderr.puts DEPRECATION_WARNING unless command == 'migrate-to-v1'
+
       case command
-      when "init"    then init
-      when "install" then install
-      when "update"  then update
-      when "list"    then list
-      when "help"    then help
-      when "-h", "--help" then help
-      when "-v", "--version" then version
-      else                usage
+      when 'init'           then init
+      when 'install'        then install
+      when 'update'         then update
+      when 'list'           then list
+      when 'migrate-to-v1'  then migrate_to_v1
+      when 'help'           then help
+      when '-h', '--help'   then help
+      when '-v', '--version' then version
+      else usage
       end
 
       0
@@ -65,7 +73,7 @@ module Mirrorfile
       1
     rescue StandardError => e
       @stderr.puts "Error: #{e.message}"
-      @stderr.puts e.backtrace.first(5).map { "  #{_1}" } if ENV["DEBUG"]
+      @stderr.puts(e.backtrace.first(5).map { "  #{_1}" }) if ENV['DEBUG']
       1
     end
 
@@ -84,9 +92,9 @@ module Mirrorfile
     # @return [void]
     # @api private
     def install
-      @stdout.puts "Installing mirrors..."
+      @stdout.puts 'Installing mirrors...'
       Mirror.new.install
-      @stdout.puts "Done."
+      @stdout.puts 'Done.'
     end
 
     # Executes the update command.
@@ -94,9 +102,9 @@ module Mirrorfile
     # @return [void]
     # @api private
     def update
-      @stdout.puts "Updating mirrors..."
+      @stdout.puts 'Updating mirrors...'
       Mirror.new.update
-      @stdout.puts "Done."
+      @stdout.puts 'Done.'
     end
 
     # Executes the list command.
@@ -106,7 +114,15 @@ module Mirrorfile
     def list
       entries = Mirror.new.list
 
-      entries.empty? ? @stdout.puts("No mirrors defined.") : entries.each { @stdout.puts _1 }
+      entries.empty? ? @stdout.puts('No mirrors defined.') : entries.each { @stdout.puts _1 }
+    end
+
+    # Executes the migrate-to-v1 command.
+    #
+    # @return [void]
+    # @api private
+    def migrate_to_v1
+      Mirror.new.migrate_to_v1
     end
 
     # Displays help information.
@@ -120,12 +136,13 @@ module Mirrorfile
         Usage: mirror <command>
 
         Commands:
-          init      Initialize project with Mirrorfile, .gitignore entry,
-                    and Zeitwerk initializer for Rails projects
-          install   Clone repositories that don't exist locally
-          update    Pull latest changes for existing repositories
-          list      Show all defined mirrors
-          help      Show this help message
+          init           Initialize project with Mirrorfile, .gitignore entry,
+                         and Zeitwerk initializer for Rails projects
+          install        Clone repositories that don't exist locally
+          update         Pull latest changes for existing repositories
+          list           Show all defined mirrors
+          migrate-to-v1  Upgrade to mirrorfile v1.0
+          help           Show this help message
 
         Options:
           -h, --help     Show this help message
@@ -155,7 +172,7 @@ module Mirrorfile
     # @return [void]
     # @api private
     def version
-      @stdout.puts "mirrorfile #{Mirrorfile::VERSION}"
+      @stdout.puts "mirrorfile #{::Mirrorfile::VERSION}"
     end
 
     # Displays usage information for unknown commands.
@@ -167,11 +184,12 @@ module Mirrorfile
         Usage: mirror <command>
 
         Commands:
-          init      Create Mirrorfile, .gitignore entry, and Zeitwerk initializer (Rails only)
-          install   Clone repositories that don't exist locally
-          update    Pull latest changes for existing repositories
-          list      Show all defined mirrors
-          help      Show detailed help
+          init           Create Mirrorfile, .gitignore entry, and Zeitwerk initializer (Rails only)
+          install        Clone repositories that don't exist locally
+          update         Pull latest changes for existing repositories
+          list           Show all defined mirrors
+          migrate-to-v1  Upgrade to mirrorfile v1.0
+          help           Show detailed help
 
         Run 'mirror help' for more information.
       USAGE
