@@ -48,6 +48,23 @@ module Mirrorfile
     def call(args)
       command = args.first
 
+      if legacy_command?(command) && Mirror.new.legacy?
+        return CLILegacy.new(stdout: @stdout, stderr: @stderr).call(args)
+      end
+
+      dispatch(args)
+    end
+
+    # Dispatches args to the appropriate command method.
+    #
+    # Separated from {#call} so that {CLILegacy} can dispatch
+    # without re-checking legacy state.
+    #
+    # @param args [Array<String>] command-line arguments
+    # @return [Integer] exit status code
+    def dispatch(args)
+      command = args.first
+
       case command
       when 'init'    then init
       when 'install' then install
@@ -71,6 +88,19 @@ module Mirrorfile
     end
 
     private
+
+    # Returns whether the given command should use legacy mode
+    # when legacy mirrors are detected.
+    #
+    # Commands like init, help, and version flags are not affected
+    # by legacy state and always use the standard CLI.
+    #
+    # @param command [String, nil] the command name
+    # @return [Boolean]
+    # @api private
+    def legacy_command?(command)
+      %w[install update list git].include?(command)
+    end
 
     # Executes the init command.
     #

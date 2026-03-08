@@ -68,10 +68,11 @@ module Mirrorfile
     #   mirror.install
     #
     # @see Entry#install
-    def install
+    def install(legacy: false)
       ensure_mirrorfile!
       mirrors_dir.mkpath
-      @mirrorfile.entries.each { _1.install(mirrors_dir) }
+      git_dir = legacy ? '.git' : '.git.mirror'
+      @mirrorfile.entries.each { _1.install(mirrors_dir, git_dir: git_dir) }
     end
 
     # Updates all existing local repositories.
@@ -88,9 +89,10 @@ module Mirrorfile
     #   mirror.update
     #
     # @see Entry#update
-    def update
+    def update(legacy: false)
       ensure_mirrorfile!
-      @mirrorfile.entries.each { _1.update(mirrors_dir) }
+      git_dir = legacy ? '.git' : '.git.mirror'
+      @mirrorfile.entries.each { _1.update(mirrors_dir, git_dir: git_dir) }
     end
 
     # Initializes a new project with mirror support.
@@ -132,6 +134,20 @@ module Mirrorfile
     def list
       ensure_mirrorfile!
       @mirrorfile.entries.to_a
+    end
+
+    # Returns whether any mirrors use legacy .git directories.
+    #
+    # A project is considered legacy if any subdirectory of mirrors/
+    # contains a .git directory without a .git.mirror sibling.
+    #
+    # @return [Boolean] true if legacy mirrors are detected
+    def legacy?
+      return false unless mirrors_dir.exist?
+
+      mirrors_dir.children.select(&:directory?).any? do |path|
+        path.join('.git').exist? && !path.join('.git.mirror').exist?
+      end
     end
 
     private

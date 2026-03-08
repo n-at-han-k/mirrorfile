@@ -41,11 +41,13 @@ module Mirrorfile
     # clone the repository once. If the local directory already exists,
     # no action is taken.
     #
-    # After cloning, the .git directory is renamed to .git.mirror so
-    # that the host project's git does not treat it as a nested repository.
-    # Use `mirror git` to run git commands against the mirrored repo.
+    # After cloning, the .git directory is renamed to the configured
+    # git_dir name (default: .git.mirror) so that the host project's
+    # git does not treat it as a nested repository.
     #
     # @param base_dir [Pathname] the base directory to clone into
+    # @param git_dir [String] the git directory name to use
+    #   (default: ".git.mirror", use ".git" for legacy mode)
     # @return [Boolean, nil] true if clone succeeded, false if failed,
     #   nil if already exists
     #
@@ -53,13 +55,15 @@ module Mirrorfile
     #   entry.install(Pathname.new("mirrors"))
     #
     # @see #update
-    def install(base_dir)
+    def install(base_dir, git_dir: '.git.mirror')
       dir = local_path(base_dir)
       return if dir.exist?
 
       return unless system('git', 'clone', url, dir.to_s)
 
-      File.rename(dir.join('.git').to_s, dir.join('.git.mirror').to_s)
+      return unless git_dir != '.git'
+
+      File.rename(dir.join('.git').to_s, dir.join(git_dir).to_s)
     end
 
     # Updates an existing repository by pulling the latest changes.
@@ -67,9 +71,9 @@ module Mirrorfile
     # Uses fast-forward only merges to avoid creating merge commits.
     # If the local directory doesn't exist, no action is taken.
     #
-    # Uses --git-dir and --work-tree to locate the .git.mirror directory.
-    #
     # @param base_dir [Pathname] the base directory containing the clone
+    # @param git_dir [String] the git directory name to use
+    #   (default: ".git.mirror", use ".git" for legacy mode)
     # @return [Boolean, nil] true if pull succeeded, false if failed,
     #   nil if directory doesn't exist
     #
@@ -77,11 +81,11 @@ module Mirrorfile
     #   entry.update(Pathname.new("mirrors"))
     #
     # @see #install
-    def update(base_dir)
+    def update(base_dir, git_dir: '.git.mirror')
       dir = local_path(base_dir)
       return unless dir.exist?
 
-      system('git', '--git-dir', dir.join('.git.mirror').to_s,
+      system('git', '--git-dir', dir.join(git_dir).to_s,
              '--work-tree', dir.to_s, 'pull', '--ff-only')
     end
 
