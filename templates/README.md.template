@@ -1,0 +1,21 @@
+# Mirrors
+
+This directory contains mirrored git repositories managed by mirrorfile.
+
+## Working with git in mirrored repos
+
+The `.git` directory in each mirrored repository is renamed to `.git.mirror`
+to prevent the parent project from detecting them as submodules.
+
+To run git commands within a mirror, use:
+
+    mirror git <command>
+
+For example:
+
+    mirror git status
+    mirror git log --oneline
+
+Alternatively, if you have [direnv](https://direnv.net/) installed, `cd` into
+a mirror directory and the `.envrc` file will automatically set
+`GIT_DIR=.git.mirror`, allowing you to use `git` commands directly.

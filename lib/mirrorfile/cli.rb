@@ -21,7 +21,7 @@ module Mirrorfile
   class CLI
     # Available CLI commands
     # @return [Array<String>] list of valid commands
-    COMMANDS = %w[init install update list help].freeze
+    COMMANDS = %w[init install update list git help].freeze
 
     # Creates a new CLI instance.
     #
@@ -49,14 +49,15 @@ module Mirrorfile
       command = args.first
 
       case command
-      when "init"    then init
-      when "install" then install
-      when "update"  then update
-      when "list"    then list
-      when "help"    then help
-      when "-h", "--help" then help
-      when "-v", "--version" then version
-      else                usage
+      when 'init'    then init
+      when 'install' then install
+      when 'update'  then update
+      when 'list'    then list
+      when 'git'     then git(args.drop(1))
+      when 'help'    then help
+      when '-h', '--help' then help
+      when '-v', '--version' then version
+      else usage
       end
 
       0
@@ -65,7 +66,7 @@ module Mirrorfile
       1
     rescue StandardError => e
       @stderr.puts "Error: #{e.message}"
-      @stderr.puts e.backtrace.first(5).map { "  #{_1}" } if ENV["DEBUG"]
+      @stderr.puts(e.backtrace.first(5).map { "  #{_1}" }) if ENV['DEBUG']
       1
     end
 
@@ -84,9 +85,9 @@ module Mirrorfile
     # @return [void]
     # @api private
     def install
-      @stdout.puts "Installing mirrors..."
+      @stdout.puts 'Installing mirrors...'
       Mirror.new.install
-      @stdout.puts "Done."
+      @stdout.puts 'Done.'
     end
 
     # Executes the update command.
@@ -94,9 +95,9 @@ module Mirrorfile
     # @return [void]
     # @api private
     def update
-      @stdout.puts "Updating mirrors..."
+      @stdout.puts 'Updating mirrors...'
       Mirror.new.update
-      @stdout.puts "Done."
+      @stdout.puts 'Done.'
     end
 
     # Executes the list command.
@@ -106,7 +107,19 @@ module Mirrorfile
     def list
       entries = Mirror.new.list
 
-      entries.empty? ? @stdout.puts("No mirrors defined.") : entries.each { @stdout.puts _1 }
+      entries.empty? ? @stdout.puts('No mirrors defined.') : entries.each { @stdout.puts _1 }
+    end
+
+    # Executes a git command against a .git.mirror directory.
+    #
+    # Runs git with --git-dir=.git.mirror in the current working
+    # directory, passing through all additional arguments.
+    #
+    # @param args [Array<String>] arguments to pass to git
+    # @return [void]
+    # @api private
+    def git(args)
+      system('git', '--git-dir=.git.mirror', *args)
     end
 
     # Displays help information.
@@ -125,6 +138,7 @@ module Mirrorfile
           install   Clone repositories that don't exist locally
           update    Pull latest changes for existing repositories
           list      Show all defined mirrors
+          git       Run git commands against a .git.mirror directory
           help      Show this help message
 
         Options:
@@ -135,6 +149,7 @@ module Mirrorfile
           $ mirror init
           $ mirror install
           $ mirror update
+          $ cd mirrors/rails && mirror git log --oneline
 
         Mirrorfile syntax:
           source "https://github.com"
@@ -155,7 +170,7 @@ module Mirrorfile
     # @return [void]
     # @api private
     def version
-      @stdout.puts "mirrorfile #{Mirrorfile::VERSION}"
+      @stdout.puts "mirrorfile #{::Mirrorfile::VERSION}"
     end
 
     # Displays usage information for unknown commands.
@@ -171,6 +186,7 @@ module Mirrorfile
           install   Clone repositories that don't exist locally
           update    Pull latest changes for existing repositories
           list      Show all defined mirrors
+          git       Run git commands against a .git.mirror directory
           help      Show detailed help
 
         Run 'mirror help' for more information.

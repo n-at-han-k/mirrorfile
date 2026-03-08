@@ -1,0 +1,24 @@
+# vim: set filetype=bash :
+#
+# This file can be utilised if `direnv` is installed.
+# Alternatively, run the following helper:
+#
+#   $ mirror git <any-git-command>
+#
+#   $ mirror git status
+#   $ mirror git add .
+#   $ mirror git commit -m "example commit message"
+#
+# Direnv related resources:
+#   Docs - https://direnv.net/
+#   Packages - https://github.com/direnv
+#   Git - https://github.com/direnv/direnv
+#
+# This is needed because mirrorfile renames the `.git` directory to `.git.mirror`.
+# This is essential to avoid issues with nested git repos that .gitignore can't solve.
+# An example would be wanting to run `git add --force ./mirrors/example-project/flake.nix`.
+# Unfortunately this doesn't work without removing the directory from .gitignore, which then means
+# you have a submodule in your repo.
+# By renaming the `.git` directory you avoid the parent repo detecting the folder as a submodule.
+
+export GIT_DIR=.git.mirror

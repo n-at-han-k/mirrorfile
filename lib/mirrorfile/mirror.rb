@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'fileutils'
+
 module Mirrorfile
   # Orchestrates mirror operations: init, install, and update.
   #
@@ -46,10 +48,10 @@ module Mirrorfile
     #   mirror = Mirrorfile::Mirror.new(root: "/path/to/project")
     def initialize(root: Dir.pwd)
       @root = Pathname.new(root)
-      @mirrors_dir = @root.join("mirrors")
-      @gitignore_path = @root.join(".gitignore")
-      @mirrorfile_path = @root.join("Mirrorfile")
-      @initializer_path = @root.join("config/initializers/mirrors.rb")
+      @mirrors_dir = @root.join('mirrors')
+      @gitignore_path = @root.join('.gitignore')
+      @mirrorfile_path = @root.join('Mirrorfile')
+      @initializer_path = @root.join('config/initializers/mirrors.rb')
       @mirrorfile = load_mirrorfile if @mirrorfile_path.exist?
     end
 
@@ -115,6 +117,7 @@ module Mirrorfile
     def init
       create_mirrorfile
       setup_gitignore
+      setup_templates
       setup_zeitwerk
       puts "Initialized mirrors in #{root}"
     end
@@ -195,10 +198,10 @@ module Mirrorfile
     # @return [Integer, nil] bytes written or nil if already ignored
     # @api private
     def setup_gitignore
-      gitignore_path.exist? || gitignore_path.write("")
+      gitignore_path.exist? || gitignore_path.write('')
 
       lines = gitignore_path.readlines.map(&:chomp)
-      lines.include?("/mirrors") || gitignore_path.write([*lines, "/mirrors"].join("\n") + "\n")
+      lines.include?('/mirrors') || gitignore_path.write([*lines, '/mirrors'].join("\n") + "\n")
     end
 
     # Creates a Rails initializer for Zeitwerk autoloading.
@@ -234,13 +237,33 @@ module Mirrorfile
       RUBY
     end
 
+    # Copies template files into the mirrors directory.
+    #
+    # Creates the mirrors directory if it doesn't exist, then copies
+    # envrc.template and README.md.template from the gem's
+    # templates directory. Existing files are not overwritten.
+    #
+    # @return [void]
+    # @api private
+    def setup_templates
+      mirrors_dir.mkpath
+
+      templates_dir = Pathname.new(__dir__).join('../../templates')
+
+      envrc_dest = mirrors_dir.join('.envrc')
+      envrc_dest.exist? || FileUtils.cp(templates_dir.join('envrc.template'), envrc_dest)
+
+      readme_dest = mirrors_dir.join('README.md')
+      readme_dest.exist? || FileUtils.cp(templates_dir.join('README.md.template'), readme_dest)
+    end
+
     # Determines if the current project is a Rails application by checking
     # for the standard Rails application entrypoint.
     #
     # @return [Boolean] true if Rails project structure is detected
     # @api private
     def rails_project?
-      root.join("config/application.rb").exist?
+      root.join('config/application.rb').exist?
     end
   end
 end
