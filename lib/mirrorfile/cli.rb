@@ -21,12 +21,7 @@ module Mirrorfile
   class CLI
     # Available CLI commands
     # @return [Array<String>] list of valid commands
-    COMMANDS = %w[init install update list migrate-to-v1 help].freeze
-
-    # Deprecation warning shown on every command except migrate-to-v1
-    DEPRECATION_WARNING = <<~WARN.freeze
-      [mirrorfile] WARNING: v#{VERSION} is deprecated. Run `mirror migrate-to-v1` to upgrade to v1.0.
-    WARN
+    COMMANDS = %w[init install update list git migrate-to-v1 help].freeze
 
     # Creates a new CLI instance.
     #
@@ -53,16 +48,32 @@ module Mirrorfile
     def call(args)
       command = args.first
 
-      @stderr.puts DEPRECATION_WARNING unless command == 'migrate-to-v1'
+      if legacy_command?(command) && Mirror.new.legacy?
+        return CLILegacy.new(stdout: @stdout, stderr: @stderr).call(args)
+      end
+
+      dispatch(args)
+    end
+
+    # Dispatches args to the appropriate command method.
+    #
+    # Separated from {#call} so that {CLILegacy} can dispatch
+    # without re-checking legacy state.
+    #
+    # @param args [Array<String>] command-line arguments
+    # @return [Integer] exit status code
+    def dispatch(args)
+      command = args.first
 
       case command
-      when 'init'           then init
-      when 'install'        then install
-      when 'update'         then update
-      when 'list'           then list
+      when 'init'    then init
+      when 'install' then install
+      when 'update'  then update
+      when 'list'    then list
+      when 'git'            then git(args.drop(1))
       when 'migrate-to-v1'  then migrate_to_v1
       when 'help'           then help
-      when '-h', '--help'   then help
+      when '-h', '--help' then help
       when '-v', '--version' then version
       else usage
       end
@@ -78,6 +89,19 @@ module Mirrorfile
     end
 
     private
+
+    # Returns whether the given command should use legacy mode
+    # when legacy mirrors are detected.
+    #
+    # Commands like init, help, and version flags are not affected
+    # by legacy state and always use the standard CLI.
+    #
+    # @param command [String, nil] the command name
+    # @return [Boolean]
+    # @api private
+    def legacy_command?(command)
+      %w[install update list git].include?(command)
+    end
 
     # Executes the init command.
     #
@@ -117,6 +141,18 @@ module Mirrorfile
       entries.empty? ? @stdout.puts('No mirrors defined.') : entries.each { @stdout.puts _1 }
     end
 
+    # Executes a git command against a .git.mirror directory.
+    #
+    # Runs git with --git-dir=.git.mirror in the current working
+    # directory, passing through all additional arguments.
+    #
+    # @param args [Array<String>] arguments to pass to git
+    # @return [void]
+    # @api private
+    def git(args)
+      system('git', '--git-dir=.git.mirror', *args)
+    end
+
     # Executes the migrate-to-v1 command.
     #
     # @return [void]
@@ -141,7 +177,8 @@ module Mirrorfile
           install        Clone repositories that don't exist locally
           update         Pull latest changes for existing repositories
           list           Show all defined mirrors
-          migrate-to-v1  Upgrade to mirrorfile v1.0
+          git            Run git commands against a .git.mirror directory
+          migrate-to-v1  Upgrade legacy mirrors to v1.0 format
           help           Show this help message
 
         Options:
@@ -152,6 +189,7 @@ module Mirrorfile
           $ mirror init
           $ mirror install
           $ mirror update
+          $ cd mirrors/rails && mirror git log --oneline
 
         Mirrorfile syntax:
           source "https://github.com"
@@ -188,7 +226,8 @@ module Mirrorfile
           install        Clone repositories that don't exist locally
           update         Pull latest changes for existing repositories
           list           Show all defined mirrors
-          migrate-to-v1  Upgrade to mirrorfile v1.0
+          git            Run git commands against a .git.mirror directory
+          migrate-to-v1  Upgrade legacy mirrors to v1.0 format
           help           Show detailed help
 
         Run 'mirror help' for more information.

@@ -68,10 +68,11 @@ module Mirrorfile
     #   mirror.install
     #
     # @see Entry#install
-    def install
+    def install(legacy: false)
       ensure_mirrorfile!
       mirrors_dir.mkpath
-      @mirrorfile.entries.each { _1.install(mirrors_dir) }
+      git_dir = legacy ? '.git' : '.git.mirror'
+      @mirrorfile.entries.each { _1.install(mirrors_dir, git_dir: git_dir) }
     end
 
     # Updates all existing local repositories.
@@ -88,9 +89,10 @@ module Mirrorfile
     #   mirror.update
     #
     # @see Entry#update
-    def update
+    def update(legacy: false)
       ensure_mirrorfile!
-      @mirrorfile.entries.each { _1.update(mirrors_dir) }
+      git_dir = legacy ? '.git' : '.git.mirror'
+      @mirrorfile.entries.each { _1.update(mirrors_dir, git_dir: git_dir) }
     end
 
     # Initializes a new project with mirror support.
@@ -117,6 +119,7 @@ module Mirrorfile
     def init
       create_mirrorfile
       setup_gitignore
+      setup_templates
       setup_zeitwerk
       puts "Initialized mirrors in #{root}"
     end
@@ -145,9 +148,23 @@ module Mirrorfile
     def migrate_to_v1
       update_gemfile
       update_system_gem
-      install_templates
+      setup_templates
       rename_git_dirs
       puts 'Migration to v1.0 complete.'
+    end
+
+    # Returns whether any mirrors use legacy .git directories.
+    #
+    # A project is considered legacy if any subdirectory of mirrors/
+    # contains a .git directory without a .git.mirror sibling.
+    #
+    # @return [Boolean] true if legacy mirrors are detected
+    def legacy?
+      return false unless mirrors_dir.exist?
+
+      mirrors_dir.children.select(&:directory?).any? do |path|
+        path.join('.git').exist? && !path.join('.git.mirror').exist?
+      end
     end
 
     private
@@ -253,6 +270,26 @@ module Mirrorfile
       RUBY
     end
 
+    # Copies template files into the mirrors directory.
+    #
+    # Creates the mirrors directory if it doesn't exist, then copies
+    # envrc.template and README.md.template from the gem's
+    # templates directory. Existing files are not overwritten.
+    #
+    # @return [void]
+    # @api private
+    def setup_templates
+      mirrors_dir.mkpath
+
+      templates_dir = Pathname.new(__dir__).join('../../templates')
+
+      envrc_dest = mirrors_dir.join('.envrc')
+      envrc_dest.exist? || FileUtils.cp(templates_dir.join('envrc.template'), envrc_dest)
+
+      readme_dest = mirrors_dir.join('README.md')
+      readme_dest.exist? || FileUtils.cp(templates_dir.join('README.md.template'), readme_dest)
+    end
+
     # Updates the Gemfile to use mirrorfile ~> 1.0.
     #
     # Replaces any existing mirrorfile gem declaration with one
@@ -287,32 +324,6 @@ module Mirrorfile
 
       puts 'Updating system gem...'
       system('gem', 'update', 'mirrorfile')
-    end
-
-    # Copies template files into the mirrors directory.
-    #
-    # Creates the mirrors directory if needed, then copies
-    # envrc.template and README.md.template. Existing files
-    # are not overwritten.
-    #
-    # @return [void]
-    # @api private
-    def install_templates
-      mirrors_dir.mkpath
-
-      templates_dir = Pathname.new(__dir__).join('../../templates')
-
-      envrc_dest = mirrors_dir.join('.envrc')
-      unless envrc_dest.exist?
-        FileUtils.cp(templates_dir.join('envrc.template'), envrc_dest)
-        puts 'Created mirrors/.envrc'
-      end
-
-      readme_dest = mirrors_dir.join('README.md')
-      return if readme_dest.exist?
-
-      FileUtils.cp(templates_dir.join('README.md.template'), readme_dest)
-      puts 'Created mirrors/README.md'
     end
 
     # Renames .git directories to .git.mirror in existing mirrors.

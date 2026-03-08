@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
-require "pathname"
+require 'pathname'
 
-require_relative "mirrorfile/version"
-require_relative "mirrorfile/entry"
-require_relative "mirrorfile/mirrorfile"
-require_relative "mirrorfile/mirror"
-require_relative "mirrorfile/cli"
+require_relative 'mirrorfile/version'
+require_relative 'mirrorfile/entry'
+require_relative 'mirrorfile/mirrorfile'
+require_relative 'mirrorfile/mirror'
+require_relative 'mirrorfile/cli'
+require_relative 'mirrorfile/cli_legacy'
 
 # Mirrorfile is a gem for managing local mirrors of git repositories.
 #
@@ -49,14 +50,14 @@ module Mirrorfile
     #
     # @return [Pathname] path to the mirrors directory
     def mirrors_dir
-      root.join("mirrors")
+      root.join('mirrors')
     end
 
     # Returns the path to the Mirrorfile
     #
     # @return [Pathname] path to the Mirrorfile
     def mirrorfile_path
-      root.join("Mirrorfile")
+      root.join('Mirrorfile')
     end
   end
 end

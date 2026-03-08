@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'stringio'
 
 class MigrateTest < Minitest::Test
   def test_migrate_updates_gemfile_version
@@ -167,32 +168,37 @@ class MigrateTest < Minitest::Test
     end
   end
 
-  def test_deprecation_warning_shown_on_regular_commands
-    stdout = StringIO.new
-    stderr = StringIO.new
-    cli = Mirrorfile::CLI.new(stdout: stdout, stderr: stderr)
-
+  def test_legacy_warning_shown_on_regular_commands_with_legacy_mirrors
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
-        cli.call(['help'])
+        FileUtils.mkdir_p('mirrors/some-repo/.git')
+        File.write('Mirrorfile', <<~RUBY)
+          source "https://github.com"
+        RUBY
+
+        stdout = StringIO.new
+        stderr = StringIO.new
+        cli = Mirrorfile::CLI.new(stdout: stdout, stderr: stderr)
+        cli.call(['list'])
+
+        assert_includes stderr.string, 'WARNING'
+        assert_includes stderr.string, 'legacy .git'
       end
     end
-
-    assert_includes stderr.string, 'WARNING'
-    assert_includes stderr.string, 'migrate-to-v1'
   end
 
-  def test_no_deprecation_warning_on_migrate
-    stdout = StringIO.new
-    stderr = StringIO.new
-    cli = Mirrorfile::CLI.new(stdout: stdout, stderr: stderr)
-
+  def test_no_warning_on_migrate_to_v1
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
+        FileUtils.mkdir_p('mirrors/some-repo/.git')
+
+        stdout = StringIO.new
+        stderr = StringIO.new
+        cli = Mirrorfile::CLI.new(stdout: stdout, stderr: stderr)
         cli.call(['migrate-to-v1'])
+
+        refute_includes stderr.string, 'WARNING'
       end
     end
-
-    refute_includes stderr.string, 'WARNING'
   end
 end
