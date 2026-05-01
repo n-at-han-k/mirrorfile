@@ -1,5 +1,7 @@
 # Mirrorfile
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/n-at-han-k/mirrorfile)
+
 Clone git repositories into a local `mirrors/` folder and keep them updated. Uses a `Mirrorfile` with Bundler-like syntax.
 
 ## Why use this
