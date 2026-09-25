@@ -28,6 +28,9 @@ mirror update    # pulls existing repos
 mirror list      # shows defined mirrors
 ```
 
+When a Gemfile exists, `mirror init` adds and installs mirrorfile
+via Bundler unless it is already declared as a dependency.
+
 ## Example Mirrorfile
 
 You can change sources mid-file:

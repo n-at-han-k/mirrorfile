@@ -173,7 +173,8 @@ module Mirrorfile
 
         Commands:
           init           Initialize project with Mirrorfile, .gitignore entry,
-                         and Zeitwerk initializer for Rails projects
+                         and Zeitwerk initializer for Rails projects;
+                         add mirrorfile to an existing Gemfile
           install        Clone repositories that don't exist locally
           update         Pull latest changes for existing repositories
           list           Show all defined mirrors
@@ -223,6 +224,7 @@ module Mirrorfile
 
         Commands:
           init           Create Mirrorfile, .gitignore entry, and Zeitwerk initializer (Rails only)
+                         Add mirrorfile to an existing Gemfile
           install        Clone repositories that don't exist locally
           update         Pull latest changes for existing repositories
           list           Show all defined mirrors
