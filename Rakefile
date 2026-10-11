@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "bundler/gem_tasks"
 require "rake/testtask"
 require "yard"
 
@@ -14,5 +13,3 @@ YARD::Rake::YardocTask.new do |t|
   t.files = ["lib/**/*.rb"]
   t.options = ["--markup", "markdown"]
 end
-
-task default: :test

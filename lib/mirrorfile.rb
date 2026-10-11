@@ -2,12 +2,12 @@
 
 require 'pathname'
 
-require_relative 'mirrorfile/version'
 require_relative 'mirrorfile/entry'
 require_relative 'mirrorfile/mirrorfile'
 require_relative 'mirrorfile/mirror'
 require_relative 'mirrorfile/cli'
 require_relative 'mirrorfile/cli_legacy'
+require_relative "mirrorfile/version"
 
 # Mirrorfile is a gem for managing local mirrors of git repositories.
 #
