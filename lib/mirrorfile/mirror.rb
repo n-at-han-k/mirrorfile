@@ -103,6 +103,7 @@ module Mirrorfile
     # - Creates a Mirrorfile with example syntax
     # - Adds /mirrors to .gitignore (creates file if needed)
     # - Creates a Rails initializer for Zeitwerk autoloading (Rails projects only)
+    # - Adds mirrorfile as a dependency if a Gemfile exists
     #
     # Existing files are not overwritten.
     #
@@ -117,6 +118,7 @@ module Mirrorfile
     # @see #setup_gitignore
     # @see #setup_zeitwerk
     def init
+      setup_dependency
       create_mirrorfile
       setup_gitignore
       setup_templates
@@ -168,6 +170,28 @@ module Mirrorfile
     end
 
     private
+
+    # Adds mirrorfile to the project's bundle, preserving existing declarations.
+    #
+    # @return [void]
+    # @raise [Error] if Bundler cannot add the dependency
+    # @api private
+    def setup_dependency
+      gemfile = root.join('Gemfile').expand_path
+      return unless gemfile.file?
+
+      require 'bundler'
+
+      Bundler.with_unbundled_env do
+        definition = Bundler::Dsl.new
+        definition.eval_gemfile(gemfile)
+        next if definition.dependencies.any? { |dependency| dependency.name == 'mirrorfile' }
+
+        unless system('bundle', 'add', 'mirrorfile', chdir: root.to_s)
+          raise Error, 'Failed to run bundle add mirrorfile'
+        end
+      end
+    end
 
     # Loads and parses the Mirrorfile.
     #
