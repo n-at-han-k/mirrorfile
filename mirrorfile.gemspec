@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
-require_relative "lib/mirrorfile/version"
+# The version is parsed rather than required so that the gemspec can be
+# evaluated on its own — bundlerEnv does exactly that, and copies only this
+# file and lib/mirrorfile/version.rb into the store.
+version = File.read(File.expand_path("lib/mirrorfile/version.rb", __dir__))[/VERSION = '([^']+)'/, 1]
 
 Gem::Specification.new do |spec|
   spec.name = "mirrorfile"
-  spec.version = Mirrorfile::VERSION
+  spec.version = version
   spec.authors = ["Nathan Kidd"]
   spec.email = ["nathankidd@hey.com"]
 
@@ -27,16 +30,18 @@ Gem::Specification.new do |spec|
   spec.metadata["documentation_uri"] = spec.homepage
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir.chdir(__dir__) do
-    `git ls-files -z`.split("\x0").reject do |f|
-      (File.expand_path(f) == __FILE__) ||
-        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile])
-    end
-  end
+  # Globbed rather than `git ls-files`: the gemspec is evaluated in the Nix
+  # store, where there is no git and the shell-out would abort evaluation.
+  spec.files = Dir.glob(
+    ["lib/**/*.rb", "exe/*", "templates/*", "CHANGELOG.md", "LICENSE.txt", "README.md"],
+    base: __dir__,
+  )
 
   spec.bindir = "exe"
   spec.executables = ["mirror"]
   spec.require_paths = ["lib"]
+
+  spec.add_dependency "gem_kit", "~> 0.2"
 
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "rake", "~> 13.0"

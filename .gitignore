@@ -12,7 +12,7 @@
 *.rbc
 .byebug_history
 .DS_Store
-Gemfile.lock
+!Gemfile.lock
 .bundler
 
 *.swp

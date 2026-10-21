@@ -10,3 +10,7 @@ group :development do
   gem "rubocop", "~> 1.21"
   gem "yard", "~> 0.9"
 end
+
+group :release do
+  gem "gem_kit-release", "~> 0.3"
+end
